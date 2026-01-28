@@ -1,0 +1,96 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model RegionConfig {
+  region        String @id
+  normalHours   Float  @default(8)
+  otMultiplier  Float  @default(1.5)
+  markup        Float  @default(1.3)
+  
+  // NJ specific
+  ownHourly     Float? // Default 17
+  ywHourly      Float? // Default 19.5
+  ownMarkup     Float? // Default 1.25
+  ywMarkup      Float? // Default 1.38
+
+  // CA specific
+  sorterHourly  Float? // Default 18
+  leaderHourly  Float? // Default 19
+}
+
+model TXSorter {
+  id         Int      @id @default(autoincrement())
+  name       String
+  hourlyWage Float
+  active     Boolean  @default(true)
+  shifts     TXShift[]
+}
+
+model CASorter {
+  id         Int      @id @default(autoincrement())
+  name       String
+  hourlyWage Float
+  role       String   @default("Sorter") // Sorter | Leader
+  active     Boolean  @default(true)
+  shifts     CAShift[]
+}
+
+model NJSorter {
+  id         Int      @id @default(autoincrement())
+  name       String
+  hourlyWage Float
+  type       String   @default("FullTime") // FullTime | PartTime
+  active     Boolean  @default(true)
+  shifts     NJShift[]
+}
+
+model DailyEntry {
+  id        Int      @id @default(autoincrement())
+  region    String
+  date      DateTime
+  packages  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  txShifts  TXShift[]
+  caShifts  CAShift[]
+  njShifts  NJShift[]
+
+  @@unique([region, date])
+}
+
+model TXShift {
+  id           Int        @id @default(autoincrement())
+  dailyEntryId Int
+  dailyEntry   DailyEntry @relation(fields: [dailyEntryId], references: [id], onDelete: Cascade)
+  sorterId     Int
+  sorter       TXSorter   @relation(fields: [sorterId], references: [id])
+  hours        Float
+  hourlyWage   Float      @default(0)
+}
+
+model CAShift {
+  id           Int        @id @default(autoincrement())
+  dailyEntryId Int
+  dailyEntry   DailyEntry @relation(fields: [dailyEntryId], references: [id], onDelete: Cascade)
+  sorterId     Int
+  sorter       CASorter   @relation(fields: [sorterId], references: [id])
+  hours        Float
+  hourlyWage   Float
+}
+
+model NJShift {
+  id           Int        @id @default(autoincrement())
+  dailyEntryId Int
+  dailyEntry   DailyEntry @relation(fields: [dailyEntryId], references: [id], onDelete: Cascade)
+  sorterId     Int
+  sorter       NJSorter   @relation(fields: [sorterId], references: [id])
+  hours        Float
+  hourlyWage   Float
+}
